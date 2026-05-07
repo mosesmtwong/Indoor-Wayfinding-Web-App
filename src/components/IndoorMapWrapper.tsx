@@ -1,27 +1,32 @@
 import React, { useContext, useEffect, useState } from "react";
 import { isMobile } from "react-device-detect";
 import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
-import { MapDataContext, NavigationContext } from "../pages/Map";
+import { BookingContext, MapDataContext, NavigationContext } from "../pages/Map";
 import {
   MapDataContextType,
   NavigationContextType,
   ObjectItem,
 } from "../utils/types";
-import { MapBackground, Paths, Positions, Objects } from "./IndoorMap";
+import { MapBackground, Paths, Positions, Objects, DeskMarkers } from "./IndoorMap";
 
 import Controls from "./MapControls";
 import ObjectDetailsModal from "./ObjectDetailsDialog";
+import BookingDialog from "./BookingDialog";
 import { navigateToObject, drawPathForFloor, lastCalculatedPath } from "@/utils/navigationHelper";
 import { toast } from "react-toastify";
+import type { Desk } from "@/utils/bookingApi";
 
 function IndoorMapWrapper() {
   const [modalOpen, setModalOpen] = useState(false);
   const [object, setObject] = useState<ObjectItem>({} as ObjectItem);
+  const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
+  const [selectedDesk, setSelectedDesk] = useState<Desk | null>(null);
   const positionRadius = isMobile ? 10 : 8;
   const { navigation, setNavigation, isEditMode, setIsEditMode, currentFloor, setCurrentFloor } = useContext(
     NavigationContext
   ) as NavigationContextType;
   const { objects } = useContext(MapDataContext) as MapDataContextType;
+  const bookingCtx = useContext(BookingContext);
 
   useEffect(() => {
     if (lastCalculatedPath.length > 0 && navigation.end) {
@@ -63,6 +68,12 @@ function IndoorMapWrapper() {
     setModalOpen(false);
     navigateToObject(object.name, navigation, setNavigation, setCurrentFloor);
   }
+
+  function handleDeskClick(desk: Desk) {
+    setSelectedDesk(desk);
+    setBookingDialogOpen(true);
+  }
+
   return (
     <div className="relative w-full h-full bg-white center overflow-hidden">
       <ObjectDetailsModal
@@ -70,6 +81,12 @@ function IndoorMapWrapper() {
         object={object}
         onClose={() => setModalOpen((cur) => !cur)}
         objectNavigation={handleNavigationClick}
+      />
+
+      <BookingDialog
+        open={bookingDialogOpen}
+        desk={selectedDesk}
+        onClose={() => setBookingDialogOpen(false)}
       />
 
       <TransformWrapper
@@ -89,6 +106,14 @@ function IndoorMapWrapper() {
               }
               currentFloor={currentFloor}
             />
+            {/* Desk markers on the map */}
+            {bookingCtx && (
+              <DeskMarkers
+                desks={bookingCtx.desks}
+                currentFloor={currentFloor}
+                onDeskClick={handleDeskClick}
+              />
+            )}
             <Paths currentFloor={currentFloor} />
             <Positions
               positionRadius={positionRadius}

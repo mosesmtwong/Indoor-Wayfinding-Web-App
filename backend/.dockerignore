@@ -1,0 +1,6 @@
+node_modules
+desk_booking.db
+.git
+.gitignore
+tests
+*.md

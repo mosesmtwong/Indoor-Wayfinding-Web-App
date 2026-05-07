@@ -144,3 +144,28 @@
     stroke-dashoffset: 120;
   }
 }
+
+/* Desk marker styles */
+.desk-marker {
+  transition: transform 0.15s ease;
+}
+.desk-marker:hover {
+  filter: brightness(0.95);
+}
+.desk-marker:hover rect:first-child {
+  opacity: 0.3 !important;
+}
+
+@keyframes deskPulse {
+  0%, 100% {
+    opacity: 0.15;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.desk-pulse {
+  animation: deskPulse 2.5s ease-in-out infinite;
+}
+

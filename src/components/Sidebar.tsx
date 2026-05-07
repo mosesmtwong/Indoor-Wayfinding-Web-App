@@ -6,10 +6,13 @@ import {
   NavigationContextType,
   ObjectItem,
 } from "@/utils/types";
-import { MapDataContext, NavigationContext } from "../pages/Map";
+import { BookingContext, MapDataContext, NavigationContext } from "../pages/Map";
 
 import { navigateToObject } from "@/utils/navigationHelper";
 import { FaInfoCircle } from "react-icons/fa";
+import BookingPanel from "./BookingPanel";
+import BookingDialog from "./BookingDialog";
+import type { Desk } from "@/utils/bookingApi";
 
 interface ParsedObjects {
   [key: string]: {
@@ -25,6 +28,12 @@ function Sidebar() {
   const { objects } = useContext(MapDataContext) as MapDataContextType;
   const [parsedObjects, setParsedObjects] = useState<ParsedObjects>({});
   const [isRotating, setIsRotating] = useState(false);
+  const [activeTab, setActiveTab] = useState<"places" | "desks">("places");
+
+  // Desk booking dialog state
+  const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
+  const [selectedDesk, setSelectedDesk] = useState<Desk | null>(null);
+
   useEffect(() => {
     const groupedObjects = () => {
       const data: ParsedObjects = {};
@@ -50,6 +59,11 @@ function Sidebar() {
     if (!object) return;
     console.log(object);
     navigateToObject(object.name, navigation, setNavigation, setCurrentFloor);
+  }
+
+  function handleDeskClick(desk: Desk) {
+    setSelectedDesk(desk);
+    setBookingDialogOpen(true);
   }
 
   return (
@@ -88,50 +102,92 @@ function Sidebar() {
           </div>
         </div>
       </header>
-      <div className="overflow-auto h-full">
-        {Object.keys(parsedObjects)
-          .sort()
-          .map((letter, index) => (
-            <div key={index} className="mb-4">
-              <header className="p-2">
-                <h2 className="text-2xl font-bold">
-                  {letter}
-                  <span className="ml-2 text-sm font-medium text-gray-900">
-                    - {parsedObjects[letter].len}{" "}
-                    {parsedObjects[letter].len === 1 ? "Result" : "Results"}
-                  </span>
-                </h2>
-              </header>
-              <div className="flex flex-col ">
-                {parsedObjects[letter].results.map((item) => (
-                  <div
-                    key={item.id?.toString()}
-                    data-product={item.name}
-                    className="flex bg-[#f4faff] m-1 px-4 py-2 shadow-sm rounded-md cursor-pointer h-auto hover:bg-[#e4f2ff]"
-                    onClick={() => handleObjectNavigation(item.name)}
-                  >
-                    <div className="m-1">
-                      <p className="text-xs 2xl:text-sm font-semibold">
-                        {item.name}
-                        {item.floor && (
-                          <span className="text-gray-400 ml-1 font-normal">
-                            (F{item.floor})
-                          </span>
-                        )}
-                      </p>
-                      <p className="text-xs 2xl:text-sm  text-gray-600">
-                        {item.desc}
-                      </p>
-                    </div>
-                    <div className="center ml-auto h-auto center text-xl text-blue-300">
-                      <FiChevronRight />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+
+      {/* Tab switcher */}
+      <div className="flex mb-3 bg-gray-100 rounded-lg p-0.5">
+        <button
+          onClick={() => setActiveTab("places")}
+          className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+            activeTab === "places"
+              ? "bg-white text-gray-900 shadow-sm"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          🏬 Places
+        </button>
+        <button
+          onClick={() => setActiveTab("desks")}
+          className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+            activeTab === "desks"
+              ? "bg-white text-gray-900 shadow-sm"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          🪑 Desks
+        </button>
       </div>
+
+      {/* Places tab (original content) */}
+      {activeTab === "places" && (
+        <div className="overflow-auto h-full">
+          {Object.keys(parsedObjects)
+            .sort()
+            .map((letter, index) => (
+              <div key={index} className="mb-4">
+                <header className="p-2">
+                  <h2 className="text-2xl font-bold">
+                    {letter}
+                    <span className="ml-2 text-sm font-medium text-gray-900">
+                      - {parsedObjects[letter].len}{" "}
+                      {parsedObjects[letter].len === 1 ? "Result" : "Results"}
+                    </span>
+                  </h2>
+                </header>
+                <div className="flex flex-col ">
+                  {parsedObjects[letter].results.map((item) => (
+                    <div
+                      key={item.id?.toString()}
+                      data-product={item.name}
+                      className="flex bg-[#f4faff] m-1 px-4 py-2 shadow-sm rounded-md cursor-pointer h-auto hover:bg-[#e4f2ff]"
+                      onClick={() => handleObjectNavigation(item.name)}
+                    >
+                      <div className="m-1">
+                        <p className="text-xs 2xl:text-sm font-semibold">
+                          {item.name}
+                          {item.floor && (
+                            <span className="text-gray-400 ml-1 font-normal">
+                              (F{item.floor})
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-xs 2xl:text-sm  text-gray-600">
+                          {item.desc}
+                        </p>
+                      </div>
+                      <div className="center ml-auto h-auto center text-xl text-blue-300">
+                        <FiChevronRight />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+        </div>
+      )}
+
+      {/* Desks tab (new booking panel) */}
+      {activeTab === "desks" && (
+        <div className="flex-1 overflow-hidden">
+          <BookingPanel onDeskClick={handleDeskClick} />
+        </div>
+      )}
+
+      {/* Booking dialog (shared between sidebar desk clicks) */}
+      <BookingDialog
+        open={bookingDialogOpen}
+        desk={selectedDesk}
+        onClose={() => setBookingDialogOpen(false)}
+      />
     </aside>
   );
 }
